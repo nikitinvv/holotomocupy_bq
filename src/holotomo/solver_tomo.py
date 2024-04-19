@@ -9,11 +9,13 @@ from .tomo import tomo
 from .utils import chunk
 
 class SolverTomo(tomo):
-    """Base class for tomography solvers using the USFFT method on GPU.
+    """
+    Base class for tomography solvers using the USFFT method on GPU.
     This class is a context manager which provides the basic operators required
     to implement a tomography solver. It also manages memory automatically,
     and provides correct cleanup for interruptions or terminations.
-    Attribtues
+
+    Parameters
     ----------
     ntheta : int
         The number of projections.    
