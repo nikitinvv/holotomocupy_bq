@@ -830,10 +830,10 @@ if flg_show:
 rec = np.ones([ntheta,pslv.ne,pslv.ne],dtype='complex64')
 rec = np.pad(recMultiPaganin,((0,0),(ne//2-n//2,ne//2-n//2),(ne//2-n//2,ne//2-n//2)),'edge')
 
-data0 = data.copy()
-data_ref0 = data_ref.copy()
+data0 = rdata.copy()
+data_ref0 = data_ref*0+1
 rec0 = rec.copy()
-prb0 = rec_prb0.copy()
+prb0 = rec_prb0*0+1
 n0 = n
 ne0 = ne
 voxelsize0 = voxelsize
@@ -852,8 +852,8 @@ def downsample(data, binning):
         res = 0.5*(res[..., ::2]+res[..., 1::2])        
     return res
 
-lbinninga = [3,2,1,0]
-iters = [513,257,129,257]
+lbinninga = [0]
+iters = [257]
 rec = downsample(rec0,lbinninga[0])
 prb = downsample(prb0,lbinninga[0])       
 for k,lbinning in enumerate(lbinninga):
@@ -870,7 +870,7 @@ for k,lbinning in enumerate(lbinninga):
     
     pslv = holotomo.SolverHolo(ntheta, n, ne, ptheta, voxelsize, energy, distances, norm_magnifications, distances2,same_probe=same_probe) 
     pslv0 = holotomo.SolverHolo(1, n, ne, 1, voxelsize, energy, distances, norm_magnifications, distances2,same_probe=same_probe)     
-    rec,prb,conv = cg_holo_batch2(pslv, pslv0, data, data_ref, rec, prb, iters[k], shifts_rec,shifts_probe, True,False,1,64, 1,2)
+    rec,prb,conv = cg_holo_batch2(pslv, pslv0, data, data_ref, rec, prb, iters[k], shifts_rec,shifts_probe, True,False,1,16, 1,2)
     
     rec = np.fft.ifftshift(np.fft.fft2(np.fft.fftshift(rec)))
     rec = np.pad(rec,((0,0),(rec.shape[1]//2,rec.shape[1]//2),(rec.shape[1]//2,rec.shape[1]//2)))

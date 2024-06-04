@@ -11,8 +11,9 @@ SPEED_OF_LIGHT = 299792458  # [m/s]
 
 class SolverHolo():
 
-    def __init__(self, ntheta, n, ne, ptheta, voxelsize, energy, distances, magnification, distances2=None,same_probe=True, pad=True):
+    def __init__(self, ntheta, n, ne, ptheta, voxelsize, energy, distances, magnification, distances2=None,same_probe=True):
         self.n = n
+        self.ne = ne
         self.voxelsize = voxelsize
         self.energy = energy
         self.distances = distances
@@ -22,9 +23,6 @@ class SolverHolo():
         self.magnification = magnification
         self.same_probe=same_probe
 
-        if pad==False:
-            ne = n
-        
         # Precalculate Fresnel propagators for different distances
         self.fP = cp.zeros([len(distances), 2*n, 2*n], dtype='complex64')
         self.fP2 = cp.zeros([len(distances), 2*n, 2*n], dtype='complex64')
@@ -40,16 +38,7 @@ class SolverHolo():
         
         # CUDA C class for faster USFFT and padding
         self.cl_holo = holo(ne, ne, n,n, ptheta)
-        self.ne = ne
-    def __enter__(self):
-        """Return self at start of a with-block."""
-        return self
-
-    def __exit__(self, type, value, traceback):
-        """Free GPU memory due at interruptions or with-block exit."""
-        # self.free()
-        pass
-
+        
     def wavelength(self):
         """Wavelength"""
         return PLANCK_CONSTANT * SPEED_OF_LIGHT / self.energy
@@ -67,16 +56,6 @@ class SolverHolo():
     def logtomo(self, psi):
         """Log representation of projections, -i/\nu log(psi)"""
         return -1j * self.wavelength() / (2*cp.pi) * self.mlog(psi) / self.voxelsize
-
-    def line_search(self, minf, gamma, u, fu, d, fd):
-        """ Line search for the step sizes gamma"""
-
-        while (minf(u, fu)-minf(u+gamma*d, fu+gamma*fd) < 0 and gamma > 1e-12):
-            gamma *= 0.5
-        if (gamma <= 1e-12):  # direction not found
-            # print('no direction')
-            gamma = 0
-        return gamma
 
     def fwd_pad(self, f):
         """Data padding"""
@@ -196,7 +175,8 @@ class SolverHolo():
                 prbr = prbr*coder            
             if self.distances2 is not None:  # propagate the probe from plane 0 to plane i
                 if shifts_probe is not None:
-                    prbr = self.apply_shift_complex(prbr, shifts_probe[i:i+1])
+                    prbr = cp.tile(prbr,(self.ptheta,1,1))
+                    prbr = self.apply_shift_complex(prbr, shifts_probe[i])
                 prbr = self.fwd_propagate(prbr, self.fP2[i])
             if shift is not None:    # shift in scaled coordinates
                 psir = self.apply_shift_complex(psir, shift[i])
@@ -231,7 +211,8 @@ class SolverHolo():
             
             if self.distances2 is not None:  # propagate the probe from plane 0 to plane i
                 if shifts_probe is not None:
-                    prbr = self.apply_shift_complex(prbr, shifts_probe[i:i+1])
+                    prbr = cp.tile(prbr,(self.ptheta,1,1))
+                    prbr = self.apply_shift_complex(prbr, shifts_probe[i])
                 prbr = self.fwd_propagate(prbr, self.fP2[i])
             # multiply the conj probe and object
             psir *= cp.conj(prbr)
@@ -270,7 +251,7 @@ class SolverHolo():
             if self.distances2 is not None:
                 prbr = self.adj_propagate(prbr, self.fP2[i])
                 if shifts_probe is not None:
-                    prbr = self.apply_shift_complex(prbr, -shifts_probe[i:i+1])
+                    prbr = self.apply_shift_complex(prbr, -shifts_probe[i])
             
             if shift_code is not None:    # shift code
                 coder = self.apply_shift_complex(code, shift_code[i])                        
@@ -297,8 +278,7 @@ class SolverHolo():
 
         if code is not None:
             code_gpu = cp.array(code)        
-        if shifts_probe is not None:
-            shifts_probe_gpu=cp.array(shifts_probe)
+        
         for ids in chunk(range(self.ntheta), self.ptheta):
             # copy data part to gpu
             psi_gpu = cp.array(psi[ids])
@@ -306,7 +286,8 @@ class SolverHolo():
                 shifts_gpu = cp.array(shifts[:,ids])
             if shifts_code is not None:
                 shifts_code_gpu = cp.array(shifts_code[:,ids])
-            
+            if shifts_probe is not None:
+                shifts_probe_gpu=cp.array(shifts_probe[:,ids])    
             # Radon transform
             res_gpu = self.fwd_holo(psi_gpu, prb_gpu, shifts_gpu, code_gpu, shifts_code_gpu,shifts_probe_gpu)
             # copy result to cpu
@@ -324,8 +305,6 @@ class SolverHolo():
 
         if code is not None:
             code_gpu = cp.array(code)   
-        if shifts_probe is not None:
-            shifts_probe_gpu=cp.array(shifts_probe)
         for ids in chunk(range(self.ntheta), self.ptheta):
             # copy data part to gpu
             fpsi_gpu = cp.array(fpsi[:, ids])
@@ -333,6 +312,8 @@ class SolverHolo():
                 shifts_gpu = cp.array(shifts[:,ids])
             if shifts_code is not None:
                 shifts_code_gpu = cp.array(shifts_code[:,ids])
+            if shifts_probe is not None:
+                shifts_probe_gpu=cp.array(shifts_probe[:,ids])  
             # Radon transform
             res_gpu = self.adj_holo(fpsi_gpu, prb_gpu, shifts_gpu, code_gpu, shifts_code_gpu,shifts_probe_gpu)
             # copy result to cpu
@@ -349,8 +330,6 @@ class SolverHolo():
         
         if code is not None:
             code_gpu = cp.array(code)   
-        if shifts_probe is not None:
-            shifts_probe_gpu=cp.array(shifts_probe)
         for ids in chunk(range(self.ntheta), self.ptheta):
             # copy data part to gpu
             fpsi_gpu = cp.array(fpsi[:, ids])
@@ -360,6 +339,8 @@ class SolverHolo():
                 shifts_gpu = cp.array(shifts[:,ids])
             if shifts_code is not None:
                 shifts_code_gpu = cp.array(shifts_code[:,ids])
+            if shifts_probe is not None:
+                shifts_probe_gpu=cp.array(shifts_probe[:,ids])  
             
             # Radon transform
             res_gpu = self.adj_holo_prb(fpsi_gpu, psi_gpu, shifts_gpu,code_gpu,shifts_code_gpu,shifts_probe_gpu)

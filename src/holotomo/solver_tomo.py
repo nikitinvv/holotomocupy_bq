@@ -126,17 +126,17 @@ class SolverTomo(tomo):
             fu = self.fwd_tomo(u)            
             
             grad = self.adj_tomo(fu-data)/self.ntheta/self.n
-            
+            d = -grad
             # Dai-Yuan direction
-            if i == 0:
-                d = -grad
-            else:
-                d = -grad+cp.linalg.norm(grad)**2 / \
-                    (1e-30+(cp.sum(cp.conj(d)*(grad-grad0))))*d
-            grad0 = grad
+            # if i == 0:
+            #     d = -grad
+            # else:
+            #     d = -grad+cp.linalg.norm(grad)**2 / \
+            #         (1e-30+(cp.sum(cp.conj(d)*(grad-grad0))))*d
+            # grad0 = grad
             # line search
-            fd = self.fwd_tomo(d)
-            gamma = self.line_search(minf, gamma0, u, fu, d, fd)
+            # fd = self.fwd_tomo(d)
+            gamma = gamma0#self.line_search(minf, gamma0, u, fu, d, fd)
             u = u + gamma*d
             # print(gamma)
             # if i%dbg_step==0:

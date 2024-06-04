@@ -332,3 +332,28 @@ nohup python rec_final_noprobe.py 2 250 25 0 100 128 4 2 True >final_noprobe_2 2
 
 
 
+
+ssh -t tomo@tomo5 "bash -c 'source ~/.bashrc; conda activate holotomo; cd vnikitin/holotomo-dev2/tests/3d_ald; pkill -9 python;\
+nohup python rec_final_aligned.py 1 150 10 0 4097 32 4 1 True >finalTrue1 &\
+nohup python rec_final_aligned.py 2 150 10 0 4097 32 4 2 True >finalTrue2 &\
+nohup python rec_final_aligned.py 3 150 10 0 4097 32 4 3 True >finalTrue3 &\
+bash'"
+
+ssh -t tomo@tomo4 "bash -c 'source ~/.bashrc; conda activate holotomo; cd vnikitin/holotomo-dev2/tests/3d_ald; pkill -9 python;\
+nohup python rec_final_aligned.py 1 150 10 0 4097 32 4 5 True >finalTrue5 &\
+nohup python rec_final_aligned.py 2 150 10 0 4097 32 4 6 True >finalTrue6 &\
+nohup python rec_final_aligned.py 3 150 10 0 4097 32 4 7 True >finalTrue7 &\
+bash'"
+
+ssh -t tomo@tomo2 "bash -c 'source ~/.bashrc; conda activate holotomo; cd vnikitin/holotomo-dev2/tests/3d_ald; pkill -9 python;\
+nohup python rec_final_aligned.py 0 150 10 0 4097 32 4 8 True >finalTrue8 &\
+nohup python rec_final_aligned.py 1 150 10 0 4097 32 4 9 True >finalTrue9 &\
+bash'"
+
+
+ssh -t tomo@tomo1 "bash -c 'source ~/.bashrc; conda activate holotomo; cd vnikitin/holotomo-dev2/tests/3d_ald; pkill -9 python;\
+nohup python rec_final_aligned.py 0 150 10 0 4097 32 4 0 True >finalTrue0 &\
+nohup python rec_final_aligned.py 0 150 10 0 4097 32 4 4 True >finalTrue4 &\
+bash'"
+
+
